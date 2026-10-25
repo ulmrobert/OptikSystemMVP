@@ -504,6 +504,16 @@ interface FormulareDialogProps {
   direktDrucken?: boolean;
 }
 
+type AgAbfrage = {
+  firma: string;
+  abteilung: string;
+  strasse: string;
+  ort: string;
+  email: string;
+};
+const agAbfrageGueltig = (a: AgAbfrage) =>
+  a.firma.trim() !== "" && /^\S+@\S+\.\S+$/.test(a.email.trim());
+
 const FormulareDialog = ({
   brille,
   onClose,
@@ -997,7 +1007,7 @@ const FormulareDialog = ({
   // aus dem Druck-HTML erzeugt
   const versendbar = Boolean(selectedVorlage);
   const [versendet, setVersendet] = useState<"email" | "whatsapp" | null>(null);
-  const versenden = async (kanal: "email" | "whatsapp") => {
+  const versendeJetzt = async (kanal: "email" | "whatsapp") => {
     if (!selectedVorlage) return;
     if (pdfVorlage && !pdfUrl) {
       notify(
@@ -1107,6 +1117,54 @@ const FormulareDialog = ({
     } finally {
       setVersendet(null);
     }
+  };
+
+  // Rechnung an den Arbeitgeber per E-Mail: vor dem Versand fragen wir
+  // Arbeitgeber, Anschrift und E-Mail-Adresse ab (vorbelegt aus der Vorschau)
+  // und tragen sie in die Rechnung ein
+  const [agAbfrage, setAgAbfrage] = useState<AgAbfrage | null>(null);
+  const agVorschauFelder = () => {
+    const doc = vorschauRef.current?.contentDocument;
+    return {
+      zeilen: [
+        ...(doc?.querySelectorAll<HTMLElement>(".anschrift div.eingabe") ?? []),
+      ],
+      email: doc?.querySelector<HTMLElement>(".versand-email") ?? null,
+    };
+  };
+  const versenden = (kanal: "email" | "whatsapp") => {
+    if (
+      kanal === "email" &&
+      selectedVorlage &&
+      AG_RECHNUNG_KATEGORIEN.includes(selectedVorlage.Kategorie)
+    ) {
+      const { zeilen, email } = agVorschauFelder();
+      const wert = (el?: HTMLElement | null) => el?.textContent?.trim() ?? "";
+      setAgAbfrage({
+        firma: wert(zeilen[0]),
+        abteilung: wert(zeilen[1]),
+        strasse: wert(zeilen[2]),
+        ort: wert(zeilen[3]),
+        email: wert(email),
+      });
+      return;
+    }
+    void versendeJetzt(kanal);
+  };
+  const agAbfrageSenden = () => {
+    if (!agAbfrage || !agAbfrageGueltig(agAbfrage)) return;
+    const { zeilen, email } = agVorschauFelder();
+    [
+      agAbfrage.firma,
+      agAbfrage.abteilung,
+      agAbfrage.strasse,
+      agAbfrage.ort,
+    ].forEach((text, i) => {
+      if (zeilen[i]) zeilen[i].textContent = text.trim();
+    });
+    if (email) email.textContent = agAbfrage.email.trim();
+    setAgAbfrage(null);
+    void versendeJetzt("email");
   };
 
   // Kostenvoranschlag/Antrag gedruckt oder verschickt: Datum am Auftrag
@@ -1697,6 +1755,54 @@ const FormulareDialog = ({
           <Button onClick={onClose}>Schließen</Button>
         </DialogActions>
       )}
+      <Dialog
+        open={agAbfrage !== null}
+        onClose={() => setAgAbfrage(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Rechnung an den Arbeitgeber senden</DialogTitle>
+        <DialogContent
+          sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}
+        >
+          {agAbfrage && (
+            <>
+              {(
+                [
+                  ["firma", "Arbeitgeber / Firma *"],
+                  ["abteilung", "Abteilung / zuständige Stelle"],
+                  ["strasse", "Straße Hausnummer"],
+                  ["ort", "PLZ Ort"],
+                  ["email", "E-Mail-Adresse des Arbeitgebers *"],
+                ] as [keyof AgAbfrage, string][]
+              ).map(([feldName, label]) => (
+                <TextField
+                  key={feldName}
+                  label={label}
+                  size="small"
+                  autoFocus={feldName === "firma"}
+                  type={feldName === "email" ? "email" : "text"}
+                  value={agAbfrage[feldName]}
+                  onChange={(ev) =>
+                    setAgAbfrage({ ...agAbfrage, [feldName]: ev.target.value })
+                  }
+                />
+              ))}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAgAbfrage(null)}>Abbrechen</Button>
+          <Button
+            variant="contained"
+            startIcon={<EmailIcon />}
+            disabled={!agAbfrage || !agAbfrageGueltig(agAbfrage)}
+            onClick={agAbfrageSenden}
+          >
+            Senden
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };
