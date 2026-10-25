@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField } from "pdf-lib";
+import {
+  PDFCheckBox,
+  PDFDict,
+  PDFDocument,
+  PDFDropdown,
+  PDFName,
+  PDFTextField,
+} from "pdf-lib";
 import { formatEuro } from "./werkstattauftragTemplate";
 import {
   PDF_VORLAGEN,
@@ -57,13 +64,15 @@ const feldwert = (pdf: PDFDocument, name: string) => {
 };
 
 describe.each(Object.entries(PDF_VORLAGEN))("PDF-Vorlage %s", (_, vorlage) => {
-  it("ist leer und kennt alle zugeordneten Felder", async () => {
+  it("ist leer (außer der bewusst vorbelegten Antrag-BAP-Vorlage) und kennt alle zugeordneten Felder", async () => {
     const pdf = await PDFDocument.load(lade(vorlage.datei));
     const form = pdf.getForm();
     const ausgefuellt = form
       .getFields()
       .filter((f) => f instanceof PDFTextField && f.getText());
-    expect(ausgefuellt.map((f) => f.getName())).toEqual([]);
+    if (vorlage.datei !== "antrag-bap.pdf") {
+      expect(ausgefuellt.map((f) => f.getName())).toEqual([]);
+    }
     const fehlend = Object.keys(vorlage.felder(entities)).filter(
       (name) => !form.getFieldMaybe(name),
     );
@@ -112,23 +121,17 @@ describe("Zuordnung der Felder", () => {
     expect(felder["AXE OD"]).toBe("90");
   });
 
-  it("Antrag BAP: Beschäftigte/r, Werte und Kostenvoranschlag", () => {
+  it("Antrag BAP: trägt nur Personendaten, Messdatum und Dioptrien ein", () => {
     const felder = PDF_VORLAGEN["Antrag BAP"].felder(entities);
     expect(felder.f_4).toBe("Muster, Erika");
     expect(felder.f_9).toBe("0170 1234567 / erika@example.com");
     expect(felder.rx_31).toBe("+0,75");
-    expect(felder.f_51).toBe("240,00");
-    expect(felder.f_54).toBe("389,00");
     expect(felder.pr_225).toBe("+0,75");
-  });
-
-  it("Antrag BAP: vorhandene Brille, Alter und Presbyopie", () => {
-    const felder = PDF_VORLAGEN["Antrag BAP"].felder(entities);
     expect(felder.pr_86).toBe("-0,50");
-    expect(felder.cb_77).toBe(true);
-    expect(felder.tb_103).toBe(true);
-    expect(Number(felder.tbf_104)).toBeGreaterThanOrEqual(5);
-    expect(felder.tb_105).toBe(true);
+    // alles andere (Arbeitgeber, Kostenvoranschlag, Kästchen, Texte) bleibt
+    const erlaubt =
+      /^(f_4|f_5|f_9|f_30|f_6[678]|hd_(62|65|130|133|208|211)|rx_\d+|pr_\d+)$/;
+    expect(Object.keys(felder).filter((n) => !erlaubt.test(n))).toEqual([]);
   });
 
   it("Beobachtungsbogen: bisherige Korrektur", () => {
@@ -240,5 +243,39 @@ describe("Abholbestätigung", () => {
       anzahlung: formatEuro(100),
       offener_betrag: formatEuro(437.55),
     });
+  });
+});
+
+describe("vorbelegte Vorlage", () => {
+  it("Antrag BAP zeigt gespeicherte Feldwerte (NeedAppearances aus) und behält sie", async () => {
+    const vorlage = PDF_VORLAGEN["Antrag BAP"];
+    const bytes = await fuellePdfVorlage(
+      vorlage,
+      lade(vorlage.datei),
+      entities,
+    );
+    const pdf = await PDFDocument.load(bytes);
+    const af = pdf.catalog.lookup(PDFName.of("AcroForm"), PDFDict);
+    expect(af.get(PDFName.of("NeedAppearances"))?.toString()).toBe("false");
+    expect(feldwert(pdf, "g_185")).toBe("oB");
+    expect(feldwert(pdf, "f_180")).toBe("Ishihara (21 Tafeln)");
+  });
+});
+
+describe("Courier und Ort/Datum", () => {
+  it("Antrag BAP: Eintragungen in Courier, Ort/Datum auf Seite 2 und letzter Seite", async () => {
+    const vorlage = PDF_VORLAGEN["Antrag BAP"];
+    const bytes = await fuellePdfVorlage(
+      vorlage,
+      lade(vorlage.datei),
+      entities,
+    );
+    const pdf = await PDFDocument.load(bytes);
+    const feld = pdf.getForm().getTextField("f_4");
+    expect(feld.acroField.getDefaultAppearance()).toContain("/Cour");
+    expect(vorlage.ortDatum?.text(entities)).toMatch(
+      /^Gera, \d{2}\.\d{2}\.\d{4}$/,
+    );
+    expect(vorlage.ortDatum?.stellen.map((s) => s.seite)).toEqual([2, -1]);
   });
 });
