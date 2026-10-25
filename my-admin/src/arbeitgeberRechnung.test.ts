@@ -69,4 +69,14 @@ describe("Rechnungen an den Arbeitgeber", () => {
       schutz: "Rechnung Arbeitsschutzbrille",
     });
   });
+
+  it("Bildschirmbrille: Feld für das Datum der Verordnung, Schutzbrille ohne", () => {
+    const daten = { entities, rechnungsnummer: "2026-0042" };
+    expect(buildArbeitgeberRechnungPrintHtml("bildschirm", daten)).toContain(
+      "Verordnung vom",
+    );
+    expect(buildArbeitgeberRechnungPrintHtml("schutz", daten)).not.toContain(
+      "Verordnung vom",
+    );
+  });
 });

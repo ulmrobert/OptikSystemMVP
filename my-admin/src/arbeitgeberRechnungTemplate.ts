@@ -129,7 +129,11 @@ export const buildArbeitgeberRechnungBodyHtml = (
   ${briefkopfHtml(k, datenbox, "RECHNUNG", anschrift)}
   <div class="inhalt">
    <div class="inhalt-block">
-    <p class="zweck">${e(ZWECK[art])}<br />Mitarbeiter/in: ${eingabe(mitarbeiter, "Name")} · Vorgangsnummer des Arbeitgebers: ${eingabe("", "falls vorhanden")}</p>
+    <p class="zweck">${e(ZWECK[art])}<br />Mitarbeiter/in: ${eingabe(mitarbeiter, "Name")} · Vorgangsnummer des Arbeitgebers: ${eingabe("", "falls vorhanden")}${
+      art === "bildschirm"
+        ? `<br />Augenärztliche/arbeitsmedizinische Verordnung vom: ${eingabe("", "TT.MM.JJJJ", "verordnung")}`
+        : ""
+    }</p>
     ${positionenHtml}
     <div class="summenbalken"><span>Rechnungsbetrag</span><span>${e(formatEuro(summe))}</span></div>
     <p class="mwst">Im obigen Betrag sind ${a.mwstSatz}% Mwst = ${e(formatEuro(mwst))} enthalten. (Nettopreis: ${e(zahl2.format(netto))} €)</p>
