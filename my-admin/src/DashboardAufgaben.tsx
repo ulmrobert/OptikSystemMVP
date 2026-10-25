@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDataProvider, useNotify } from "react-admin";
 import { useNavigate } from "react-router-dom";
 import {
@@ -66,7 +67,10 @@ type Liste = {
   max?: number;
 };
 
+// Sichtbare Zeilen je Karte; weitere Einträge erreicht man durch Scrollen
+// in der Karte (Zeilenhöhe ca. 52 px).
 const MAX_ZEILEN = 6;
+const ZEILEN_HOEHE = 52;
 const ZULETZT_ANZAHL = 10;
 
 const datum = (wert: unknown) =>
@@ -129,8 +133,20 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
           {liste.leer}
         </Typography>
       ) : (
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
-          {liste.zeilen.slice(0, liste.max ?? MAX_ZEILEN).map((zeile) => {
+        <Box
+          tabIndex={0}
+          role="list"
+          aria-label={`${liste.titel}, scrollbar`}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            maxHeight: (liste.max ?? MAX_ZEILEN) * ZEILEN_HOEHE,
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            scrollbarGutter: "stable",
+          }}
+        >
+          {liste.zeilen.map((zeile) => {
             const nummer = choosePhoneNumberForMessaging([
               zeile.kunde?.Handy,
               zeile.kunde?.TelefonnummerPrivat,
@@ -138,6 +154,7 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
             return (
               <Box
                 key={zeile.key}
+                role="listitem"
                 sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
               >
                 <ButtonBase
@@ -192,22 +209,23 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
               </Box>
             );
           })}
-          {liste.zeilen.length > (liste.max ?? MAX_ZEILEN) && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ px: 1.5, pt: 0.5 }}
-            >
-              + {liste.zeilen.length - (liste.max ?? MAX_ZEILEN)} weitere
-            </Typography>
-          )}
         </Box>
       )}
     </Card>
   );
 };
 
-export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
+const ZULETZT_TITEL = "Zuletzt angelegt oder angesehen";
+
+// obenSlot: "Zuletzt angelegt oder angesehen" erscheint im oberen
+// Kartenbereich (obenSlot) statt in "Heute zu tun".
+export const DashboardAufgaben = ({
+  stand,
+  obenSlot,
+}: {
+  stand: Date | null;
+  obenSlot?: HTMLElement | null;
+}) => {
   const dataProvider = useDataProvider();
   const [listen, setListen] = useState<Liste[] | null>(null);
   const [fehler, setFehler] = useState(false);
@@ -355,7 +373,7 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
             })),
         },
         {
-          titel: "Zuletzt angelegt oder angesehen",
+          titel: ZULETZT_TITEL,
           hinweis: "die neuesten zuerst",
           leer: "Noch keine Kunden angelegt oder angesehen.",
           ohneZahl: true,
@@ -455,9 +473,12 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
         }}
       >
         <ErinnerungenKarte stand={stand} />
-        {listen.map((liste) => (
-          <AufgabenKarte key={liste.titel} liste={liste} />
-        ))}
+        {listen.map((liste) => {
+          const karte = <AufgabenKarte key={liste.titel} liste={liste} />;
+          if (liste.titel !== ZULETZT_TITEL || obenSlot === undefined)
+            return karte;
+          return obenSlot ? createPortal(karte, obenSlot) : null;
+        })}
       </Box>
     </Box>
   );

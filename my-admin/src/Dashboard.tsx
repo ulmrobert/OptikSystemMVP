@@ -54,6 +54,16 @@ type BrilleRow = {
 // "Versicherung" - dort zahlt die Versicherung)
 const UNBEZAHLT = ["offen", "teilweise offen", "Ratenzahlung"];
 
+// Listen-Kacheln zeigen bis zu so viele Einträge; sichtbar sind etwa acht,
+// der Rest erscheint durch Scrollen in der Kachel.
+const SCROLL_ZEILEN = 100;
+const scrollListeSx = {
+  maxHeight: 440,
+  overflowY: "auto",
+  overscrollBehavior: "contain",
+  scrollbarGutter: "stable",
+} as const;
+
 const euro = new Intl.NumberFormat("de-DE", {
   style: "currency",
   currency: "EUR",
@@ -393,6 +403,7 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [obenSlot, setObenSlot] = useState<HTMLElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -492,12 +503,12 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
             b.Fertig ?? b.Abholung ?? "",
           ),
         )
-        .slice(0, 8);
+        .slice(0, SCROLL_ZEILEN);
 
       const neueKunden = neueKundenRes.total ?? neueKundenRes.data.length;
 
       const schuldnerAll = schuldnerRes.data as BrilleRow[];
-      const schuldnerRows = schuldnerAll.slice(0, 8);
+      const schuldnerRows = schuldnerAll.slice(0, SCROLL_ZEILEN);
       const schuldnerSumme =
         Math.round(
           schuldnerAll.reduce((s, r) => s + (Number(r.Restbetrag) || 0), 0) *
@@ -727,75 +738,6 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
             {!statistik && (
               <>
                 <DashboardCard
-                  title="Heutige Termine"
-                  action={
-                    <Button size="small" onClick={() => navigate("/kalender")}>
-                      Kalender
-                    </Button>
-                  }
-                >
-                  {stats.termine.heute.length === 0 ? (
-                    <EmptyHint>Keine Termine heute.</EmptyHint>
-                  ) : (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 0.25,
-                      }}
-                    >
-                      {stats.termine.heute.slice(0, 6).map((termin) => (
-                        <ButtonBase
-                          key={termin.id}
-                          onClick={() => navigate(`/termin/${termin.id}/show`)}
-                          sx={listRowSx}
-                        >
-                          <Typography
-                            sx={{
-                              width: 44,
-                              flex: "none",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: "text.secondary",
-                              fontVariantNumeric: "tabular-nums",
-                            }}
-                          >
-                            {dayjs(termin.Start).format("HH:mm")}
-                          </Typography>
-                          <Box
-                            aria-hidden="true"
-                            sx={{
-                              width: 3,
-                              alignSelf: "stretch",
-                              borderRadius: 3,
-                              bgcolor: "primary.main",
-                              flex: "none",
-                            }}
-                          />
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography
-                              noWrap
-                              sx={{ fontWeight: 600, fontSize: 14 }}
-                            >
-                              {termin.kundeName}
-                            </Typography>
-                            <Typography
-                              noWrap
-                              sx={{
-                                fontSize: 12.5,
-                                color: (theme) => tokensFor(theme).text3,
-                              }}
-                            >
-                              {termin.Terminart || "Termin"}
-                            </Typography>
-                          </Box>
-                        </ButtonBase>
-                      ))}
-                    </Box>
-                  )}
-                </DashboardCard>
-
-                <DashboardCard
                   title="Abholbereite Brillen"
                   span
                   action={
@@ -814,10 +756,13 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
                     <EmptyHint>Aktuell keine abholbereiten Brillen.</EmptyHint>
                   ) : (
                     <Box
+                      tabIndex={0}
+                      aria-label="Abholbereite Brillen, scrollbar"
                       sx={{
                         display: "flex",
                         flexDirection: "column",
                         gap: 0.25,
+                        ...scrollListeSx,
                       }}
                     >
                       {stats.abholbereit.rows.map((row) => (
@@ -902,6 +847,8 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
                     </Box>
                   )}
                 </DashboardCard>
+
+                <Box ref={setObenSlot} sx={{ display: "contents" }} />
               </>
             )}
 
@@ -925,69 +872,80 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
                         gap: 0.25,
                       }}
                     >
-                      {stats.schuldner.rows.map((row) => (
-                        <ButtonBase
-                          key={row.id}
-                          onClick={() => navigate(`/brille/${row.id}/show`)}
-                          sx={(theme) => ({
-                            ...listRowSx(theme),
-                            flexWrap: "wrap",
-                          })}
-                        >
-                          <Box
-                            aria-hidden="true"
+                      <Box
+                        tabIndex={0}
+                        aria-label="Unbezahlte Aufträge, scrollbar"
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 0.25,
+                          ...scrollListeSx,
+                        }}
+                      >
+                        {stats.schuldner.rows.map((row) => (
+                          <ButtonBase
+                            key={row.id}
+                            onClick={() => navigate(`/brille/${row.id}/show`)}
                             sx={(theme) => ({
-                              flex: "none",
-                              width: 34,
-                              height: 34,
-                              borderRadius: "50%",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 12,
-                              fontWeight: 700,
-                              backgroundColor: toneColors(theme, "error").bg,
-                              color: toneColors(theme, "error").fg,
+                              ...listRowSx(theme),
+                              flexWrap: "wrap",
                             })}
                           >
-                            {initialen(row.kundeName)}
-                          </Box>
-                          <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
-                            <Typography
-                              noWrap
-                              sx={{ fontWeight: 600, fontSize: 14 }}
+                            <Box
+                              aria-hidden="true"
+                              sx={(theme) => ({
+                                flex: "none",
+                                width: 34,
+                                height: 34,
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                backgroundColor: toneColors(theme, "error").bg,
+                                color: toneColors(theme, "error").fg,
+                              })}
                             >
-                              {row.kundeName}
-                            </Typography>
+                              {initialen(row.kundeName)}
+                            </Box>
+                            <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+                              <Typography
+                                noWrap
+                                sx={{ fontWeight: 600, fontSize: 14 }}
+                              >
+                                {row.kundeName}
+                              </Typography>
+                              <Typography
+                                noWrap
+                                sx={{
+                                  fontSize: 12.5,
+                                  color: (theme) => tokensFor(theme).text3,
+                                }}
+                              >
+                                Auftrag {row.id}
+                                {row.Datum
+                                  ? ` · seit ${dayjs(row.Datum).format("DD.MM.YYYY")}`
+                                  : ""}
+                                {row.Zahlungsstatus
+                                  ? ` · ${row.Zahlungsstatus}`
+                                  : ""}
+                              </Typography>
+                            </Box>
                             <Typography
-                              noWrap
-                              sx={{
-                                fontSize: 12.5,
-                                color: (theme) => tokensFor(theme).text3,
-                              }}
+                              sx={(theme) => ({
+                                minWidth: 90,
+                                textAlign: "right",
+                                fontWeight: 600,
+                                fontVariantNumeric: "tabular-nums",
+                                color: toneColors(theme, "error").fg,
+                              })}
                             >
-                              Auftrag {row.id}
-                              {row.Datum
-                                ? ` · seit ${dayjs(row.Datum).format("DD.MM.YYYY")}`
-                                : ""}
-                              {row.Zahlungsstatus
-                                ? ` · ${row.Zahlungsstatus}`
-                                : ""}
+                              {euro.format(Number(row.Restbetrag) || 0)}
                             </Typography>
-                          </Box>
-                          <Typography
-                            sx={(theme) => ({
-                              minWidth: 90,
-                              textAlign: "right",
-                              fontWeight: 600,
-                              fontVariantNumeric: "tabular-nums",
-                              color: toneColors(theme, "error").fg,
-                            })}
-                          >
-                            {euro.format(Number(row.Restbetrag) || 0)}
-                          </Typography>
-                        </ButtonBase>
-                      ))}
+                          </ButtonBase>
+                        ))}
+                      </Box>
                       <Typography
                         variant="body2"
                         sx={{
@@ -1044,7 +1002,9 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
           </Box>
 
           {/* "Heute zu tun" unter den heutigen Terminen */}
-          {!statistik && <DashboardAufgaben stand={lastUpdated} />}
+          {!statistik && (
+            <DashboardAufgaben stand={lastUpdated} obenSlot={obenSlot} />
+          )}
         </>
       ) : null}
     </Box>
