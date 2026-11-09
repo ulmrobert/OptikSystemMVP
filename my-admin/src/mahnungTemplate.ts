@@ -53,6 +53,9 @@ Mit freundlichen Grüßen
 {{betrieb.name}}
 {{betrieb.kontakt}}`;
 
+// Pauschale Mahngebühr der letzten Mahnung (Stufe 4), in Euro
+export const MAHNGEBUEHR = 5;
+
 const tag = (wert: unknown): Dayjs | null => {
   const roh = text(wert);
   if (!roh) return null;
@@ -103,6 +106,7 @@ export const mahnungPlatzhalter = ({
   const a = RECHNUNG_ABSENDER;
   const rechnungVom = rechnungsdatum(entities.brille);
   const frist = dayjs().add(a.zahlungszielTage, "day");
+  const offen = buildWerkstattauftragSummen(entities).offen;
   return {
     ...buildDocumentMergeValues(entities),
     "kunde.briefanrede": briefanrede(entities.kunde),
@@ -113,7 +117,9 @@ export const mahnungPlatzhalter = ({
     "rechnung.faellig": datum(
       rechnungVom ? rechnungVom.add(a.zahlungszielTage, "day") : null,
     ),
-    "mahnung.betrag": formatEuro(buildWerkstattauftragSummen(entities).offen),
+    "mahnung.betrag": formatEuro(offen),
+    "mahnung.gebuehr": formatEuro(MAHNGEBUEHR),
+    "mahnung.gesamt": formatEuro(offen + MAHNGEBUEHR),
     "mahnung.frist": datum(frist),
     "betrieb.name": a.firma,
     "betrieb.kontakt": `Tel. ${a.telefon} · ${a.email}`,

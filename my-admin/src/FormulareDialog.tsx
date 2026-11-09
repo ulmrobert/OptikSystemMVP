@@ -398,7 +398,8 @@ const LAYOUTS: Record<string, Layout> = {
 
 // Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen (#57, Namen seit
 // 20261019100000_mahnung_briefkopf_texte.sql: Zahlungserinnerung,
-// 1. Mahnung, 2. Mahnung (Inkasso-Ankündigung)). Es
+// 1. Mahnung, 2. Mahnung (Inkasso-Ankündigung), Stufe 4 seit
+// 20261109100000_mahnstufe_4_letzte_mahnung.sql). Es
 // gibt mehrere aktive Vorlagen der Kategorie "Mahnung" (eine je Stufe), daher
 // reicht die generische "genau ein Treffer"-Auswahl unten nicht aus - der
 // Name der zur aktuellen Mahnstufe passenden Vorlage wird explizit über
@@ -432,6 +433,7 @@ const MAHNUNG_VORLAGE_NACH_STUFE: Record<number, string> = {
   1: "Zahlungserinnerung",
   2: "1. Mahnung",
   3: "2. Mahnung (Inkasso-Ankündigung)",
+  4: "Letzte Mahnung (Mahngebühr)",
 };
 
 type Dokumentvorlage = RaRecord & {
