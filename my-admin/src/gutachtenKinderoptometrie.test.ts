@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import dayjs from "dayjs";
+import { RECHNUNG_ABSENDER } from "./rechnungTemplate";
 import {
   alterText,
   buildGutachtenKinderoptometriePreviewHtml,
@@ -47,5 +48,35 @@ describe("Gutachten Kinderoptometrie", () => {
     expect(buildGutachtenKinderoptometriePrintHtml({ entities })).not.toContain(
       ":empty::before",
     );
+  });
+
+  it("passt auf eine A4-Seite und enthält die Übersichtstabelle", () => {
+    const html = buildGutachtenKinderoptometriePrintHtml({ entities });
+    expect(html.match(/class="seite"/g)).toHaveLength(1);
+    expect(html).toContain("<th>Bereich</th><th>Ergebnis</th><th>Status</th>");
+    expect(html).toContain("keine vollständige Untersuchung");
+  });
+
+  it("druckt ohne Stempelbild einen Textstempel mit Betriebs- und IK-Nummer", () => {
+    const html = buildGutachtenKinderoptometriePrintHtml({
+      entities,
+      bilder: {},
+    });
+    expect(html).toContain("stempel-text");
+    expect(html).toContain(`Betriebsnr.: ${RECHNUNG_ABSENDER.betriebsnr}`);
+    expect(html).toContain(`IK-Nr.: ${RECHNUNG_ABSENDER.ik}`);
+    expect(html).toContain("Unterschrift –");
+    expect(html).not.toContain("Inhaber</");
+  });
+
+  it("bettet hochgeladene Unterschrift und Stempel ein", () => {
+    const png = "data:image/png;base64,iVBORw0KGgo=";
+    const html = buildGutachtenKinderoptometriePrintHtml({
+      entities,
+      bilder: { stempel: png, unterschrift: png },
+    });
+    expect(html).toContain('class="stempel-bild"');
+    expect(html).toContain('class="unterschrift-bild"');
+    expect(html).not.toContain('stempel-text"');
   });
 });

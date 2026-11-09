@@ -62,7 +62,10 @@ import {
   useRecordContext,
   useRefresh,
 } from "react-admin";
+import dayjs from "dayjs";
 import { supabase } from "./utils";
+import { legeDokumentBeimKundenAb } from "./kundeDokumentAblage";
+import { gutachtenDateiname } from "./kundeDokumenteSpeicher";
 import { ladeBetriebBilder } from "./betriebBilderSpeicher";
 import {
   buildDocumentMergeValues,
@@ -1177,6 +1180,7 @@ const FormulareDialog = ({
         vorab,
       );
       if (ergebnis !== "abgebrochen") kvMerken();
+      if (ergebnis !== "abgebrochen") void gutachtenAblegen(datei);
       if (ergebnis === "heruntergeladen") setVersandDatei(datei);
       if (ergebnis === "heruntergeladen") {
         notify(
@@ -1213,6 +1217,36 @@ const FormulareDialog = ({
       .catch(() => undefined);
   };
 
+  // Jedes Gutachten Kinderoptometrie wird beim Drucken/Öffnen/Versenden als
+  // PDF automatisch in der Kundenkartei (Dokumente) abgelegt; ein erneuter
+  // Druck am selben Tag ersetzt die Datei. Fehler stören den Druck nicht.
+  const gutachtenAblegen = async (fertig?: File) => {
+    const kundeId = kunde?.id;
+    if (
+      selectedVorlage?.Kategorie !== "Gutachten Kinderoptometrie" ||
+      typeof kundeId !== "number"
+    )
+      return;
+    try {
+      const datei =
+        fertig ??
+        (await belegAlsPdf(
+          druckHtml(),
+          gutachtenDateiname(kunde?.Nachname, dayjs()),
+          layoutDef?.format,
+          layoutDef?.blatt,
+        ));
+      await legeDokumentBeimKundenAb({ kundeId, datei, art: "Formular" });
+      notify("Gutachten beim Kunden unter „Dokumente“ abgelegt.", {
+        type: "info",
+      });
+    } catch {
+      notify("Das Gutachten konnte nicht beim Kunden abgelegt werden.", {
+        type: "warning",
+      });
+    }
+  };
+
   const handleAction = (
     autoPrint: boolean,
     successMessage: string,
@@ -1244,6 +1278,7 @@ const FormulareDialog = ({
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
     });
+    void gutachtenAblegen();
   };
 
   if (direkt) {

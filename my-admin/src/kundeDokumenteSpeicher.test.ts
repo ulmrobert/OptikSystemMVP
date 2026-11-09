@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import dayjs from "dayjs";
 import {
   dateiImSpeicher,
+  gutachtenDateiname,
   formatGroesse,
   pruefeDatei,
   schlageArtVor,
@@ -70,5 +72,18 @@ describe("dateiImSpeicher", () => {
     expect(kopie.name).toBe("befund.pdf");
     expect(kopie.type).toBe("application/pdf");
     expect(await kopie.text()).toBe("abc");
+  });
+
+  it("benennt das automatisch abgelegte Gutachten", () => {
+    const tag = dayjs("2026-10-21");
+    expect(gutachtenDateiname("Friedrich", tag)).toBe(
+      "Gutachten_Kinderoptometrie_Friedrich_2026-10-21.pdf",
+    );
+    expect(gutachtenDateiname(undefined, tag)).toBe(
+      "Gutachten_Kinderoptometrie_Kunde_2026-10-21.pdf",
+    );
+    expect(schlageArtVor(gutachtenDateiname("Friedrich", tag))).toBe(
+      "Formular",
+    );
   });
 });

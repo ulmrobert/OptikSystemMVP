@@ -40,6 +40,16 @@ export const schlageArtVor = (dateiname: string): DokumentArt => {
   return "Sonstiges";
 };
 
+/** Dateiname des automatisch abgelegten Gutachtens, z. B.
+ *  "Gutachten_Kinderoptometrie_Friedrich_2026-10-21.pdf". */
+export const gutachtenDateiname = (
+  nachname: unknown,
+  datum: { format: (muster: string) => string },
+): string => {
+  const name = typeof nachname === "string" ? nachname.trim() : "";
+  return `Gutachten_Kinderoptometrie_${name || "Kunde"}_${datum.format("YYYY-MM-DD")}.pdf`;
+};
+
 /** Fehlertext, wenn die Datei nicht abgelegt werden darf, sonst null. */
 export const pruefeDatei = (datei: {
   name: string;
