@@ -30,15 +30,12 @@ export const versandDateiname = (
     .concat(".pdf");
 
 export type VersandArt =
-  | "rechnung"
-  | "arbeitgeberRechnung"
-  | "mahnung"
-  | "formular";
+  "rechnung" | "arbeitgeberRechnung" | "mahnung" | "formular";
 
-const signatur = () => {
+const signatur = (gruss = "Herzliche Grüße") => {
   const a = RECHNUNG_ABSENDER;
   return [
-    "Herzliche Grüße",
+    gruss,
     a.inhaber,
     `${a.firma} · ${a.marke}`,
     `${a.strasseLang} · ${a.plz} ${a.ort}`,
@@ -92,6 +89,25 @@ ${signatur()}`,
     };
   }
   if (art === "mahnung") {
+    // Zahlungserinnerung (1. Stufe): freundlich, mit Optiker-Bezug
+    if (/zahlungserinnerung/i.test(titel)) {
+      return {
+        betreff: `Zahlungserinnerung${nummer ? ` zur Rechnung ${nummer}` : ""}: Ihre Rechnung bei ${firma} im Fokus`,
+        text: `${grussformel(kunde)},
+
+bei der Durchsicht unserer Konten ist uns eine offene Rechnung${nummer ? ` (Nr. ${nummer})` : ""} aufgefallen, die Ihnen im Alltag wohl aus dem Blickfeld geraten ist.
+
+Alle Details zu den offenen Positionen und das Zahlungsziel finden Sie in der beigefügten Zahlungserinnerung.
+
+Bitte überweisen Sie den offenen Betrag bis zum Zahlungsziel. Falls Sie bereits gezahlt haben, betrachten Sie dieses Schreiben bitte als gegenstandslos.
+
+Da Sie Ihre Rechnungen per E-Mail erhalten, senden wir Ihnen auch diese Erinnerung digital: papierlos und umweltfreundlich.
+
+Bei Fragen oder falls Sie eine Ratenzahlung wünschen, richten wir uns gern auf Ihre Bedürfnisse ein und sorgen gemeinsam für klare Sicht.
+
+${signatur("Mit freundlichen Grüßen")}`,
+      };
+    }
     return {
       betreff: `${titel}${nummer ? ` zur Rechnung ${nummer}` : ""} – ${firma}`,
       text: `${grussformel(kunde)},
@@ -100,7 +116,7 @@ anbei erhalten Sie unser Schreiben „${titel}“${nummer ? ` zur Rechnung Nr. $
 
 Sollten Sie bereits gezahlt haben, betrachten Sie dieses Schreiben bitte als gegenstandslos. Bei Fragen melden Sie sich gern bei uns.
 
-${signatur()}`,
+${signatur("Mit freundlichen Grüßen")}`,
     };
   }
   return {
