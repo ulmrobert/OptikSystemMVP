@@ -50,6 +50,18 @@ const migrationsTexte = [...MIGRATION.matchAll(/\$\$([\s\S]*?)\$\$/g)].map(
   (treffer) => treffer[1],
 );
 
+const MIGRATION_STUFE_4 = fs.readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../supabase/migrations/20261109100000_mahnstufe_4_letzte_mahnung.sql",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
+const stufe4Text =
+  /\$\$([\s\S]*?)\$\$, true/.exec(MIGRATION_STUFE_4)?.[1] ?? "";
+
 describe("Mahnung: Platzhalter", () => {
   it("redet den Kunden mit Namen an, sonst allgemein", () => {
     expect(briefanrede(entities.kunde)).toBe("Sehr geehrte Frau Muster");
@@ -92,10 +104,22 @@ describe("Mahnung: Platzhalter", () => {
     expect(werte["mahnung.frist"]).toBe(
       dayjs().add(14, "day").format("DD.MM.YYYY"),
     );
+    expect(werte["mahnung.gebuehr"]).toBe("5,00");
+    expect(werte["mahnung.gesamt"]).toBe("472,50");
     expect(werte["betrieb.name"]).toBe("Augenoptik Ulm");
     expect(werte["betrieb.kontakt"]).toContain("info@augenoptik-ulm.de");
     expect(werte["betrieb.bank"]).toContain("IBAN DE11");
     expect(werte["kunde.briefanrede"]).toBe("Sehr geehrte Frau Muster");
+  });
+
+  it("kennt alle Platzhalter der letzten Mahnung (Stufe 4)", () => {
+    const bekannt = Object.keys(mahnungPlatzhalter(daten));
+    const platzhalter = [...stufe4Text.matchAll(/\{\{\s*([\w.]+)\s*\}\}/g)].map(
+      (treffer) => treffer[1].toLowerCase(),
+    );
+    expect(platzhalter).toContain("mahnung.gebuehr");
+    expect(platzhalter).toContain("mahnung.gesamt");
+    for (const name of platzhalter) expect(bekannt).toContain(name);
   });
 
   it("kennt alle Platzhalter der Mahntexte", () => {
