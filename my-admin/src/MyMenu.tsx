@@ -187,6 +187,11 @@ export const MyMenu = () => (
       primaryText="Terminkalender"
       leftIcon={<CalendarIcon />}
     />
+    <Menu.Item
+      to="/telefon-anfragen"
+      primaryText="Telefon-Anfragen"
+      leftIcon={<ListIcon />}
+    />
 
     <Section label="Kunden" />
     <Menu.Item to="/kunde" primaryText="Kunden" leftIcon={<UsersIcon />} />
