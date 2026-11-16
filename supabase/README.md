@@ -475,3 +475,28 @@ nicht übernommen. Stand des letzten Abgleichs in `kalender_abgleich`.
 
 In der App startet "Mit Google abgleichen" (Terminliste, Terminkalender)
 einen Abgleich sofort.
+
+## KI-Telefonassistent: Terminanfragen (`telefon-termin`)
+
+Webhook für einen KI-Telefonassistenten (z. B. STRATO "KI Telefonassistent",
+dessen API-Anbindung vor dem Einsatz gegen die Anbieter-Doku zu prüfen ist).
+Die Function `telefon-termin` speichert Terminwünsche in
+`telefon_terminanfrage`; ein Termin im Kalender entsteht erst, wenn das Team
+die Anfrage bestätigt. Passt die Rufnummer zu genau einem Kunden
+(`finde_kunde_nach_telefon`), wird `kunde_id` gesetzt, sonst bleibt sie leer.
+
+Request: `POST https://<ref>.supabase.co/functions/v1/telefon-termin` mit
+Header `x-webhook-secret` und JSON
+`{ "name": "...", "telefon": "+49 ...", "wunschtermin": "2026-11-20T10:00:00+01:00", "anliegen": "..." }`.
+Antwort: `{ "id": 1, "bekannterKunde": true }`. Anrufdaten sind personenbezogen:
+vor dem Einsatz Auftragsverarbeitungsvertrag mit dem Anbieter abschließen und
+die Datenschutzerklärung ergänzen.
+
+**Einrichtung je Projekt** (Edge Functions werden nicht per CI deployt):
+
+```bash
+supabase secrets set --project-ref psxrxggwqlltfhfskeoa TELEFON_WEBHOOK_SECRET=<langes-zufälliges-secret>
+supabase functions deploy telefon-termin --no-verify-jwt --project-ref psxrxggwqlltfhfskeoa
+```
+
+(für Prod mit `cktdtojgrxskihihmnjm`).
