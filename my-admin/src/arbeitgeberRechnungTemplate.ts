@@ -37,7 +37,7 @@ export const ARBEITGEBER_RECHNUNG_KATEGORIEN = {
 
 const ZWECK: Record<ArbeitgeberRechnungArt, string> = {
   bildschirm:
-    "für eine Bildschirmarbeitsplatzbrille auf Veranlassung des Arbeitgebers (ArbMedVV, Anhang Teil 4 Abs. 2 Nr. 1)",
+    "für die Bereitstellung einer Bildschirmarbeitsplatzbrille (Sehhilfe zur ausschließlichen Verwendung bei der Tätigkeit an Bildschirmgeräten) im Rahmen der Angebotsvorsorge gemäß § 5 Abs. 1 i. V. m. Anhang Teil 4 Abs. 2 Nr. 1 der Verordnung zur arbeitsmedizinischen Vorsorge (ArbMedVV) sowie § 3 Abs. 3 ArbSchG",
   schutz:
     "für eine Arbeitsschutzbrille mit Sehstärke (Korrektionsschutzbrille nach DIN EN 166) als persönliche Schutzausrüstung",
 };
@@ -129,7 +129,11 @@ export const buildArbeitgeberRechnungBodyHtml = (
   ${briefkopfHtml(k, datenbox, "RECHNUNG", anschrift)}
   <div class="inhalt">
    <div class="inhalt-block">
-    <p class="zweck">${e(ZWECK[art])}<br />Mitarbeiter/in: ${eingabe(mitarbeiter, "Name")} · Vorgangsnummer des Arbeitgebers: ${eingabe("", "falls vorhanden")}</p>
+    <p class="zweck">${e(ZWECK[art])}<br />Mitarbeiter/in: ${eingabe(mitarbeiter, "Name")} · Vorgangsnummer des Arbeitgebers: ${eingabe("", "falls vorhanden")}${
+      art === "bildschirm"
+        ? `<br />Augenärztliche/arbeitsmedizinische Verordnung vom: ${eingabe("", "TT.MM.JJJJ", "verordnung")}`
+        : ""
+    }</p>
     ${positionenHtml}
     <div class="summenbalken"><span>Rechnungsbetrag</span><span>${e(formatEuro(summe))}</span></div>
     <p class="mwst">Im obigen Betrag sind ${a.mwstSatz}% Mwst = ${e(formatEuro(mwst))} enthalten. (Nettopreis: ${e(zahl2.format(netto))} €)</p>
