@@ -24,6 +24,7 @@ describe("istFertigungsauftrag", () => {
     expect(istFertigungsauftrag("Erweiterte Führerscheinuntersuchung")).toBe(
       false,
     );
+    expect(istFertigungsauftrag("Intraokular - Druckmessung")).toBe(false);
     expect(istFertigungsauftrag("Kontaktlinsenanpassung")).toBe(false);
     expect(istFertigungsauftrag("CL - KK")).toBe(false);
   });
