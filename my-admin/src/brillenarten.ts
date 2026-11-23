@@ -21,6 +21,7 @@ export const BRILLENARTEN = [
   "Beratung",
   "Optometrische Refraktion",
   "Erweiterte Führerscheinuntersuchung",
+  "Intraokular - Druckmessung",
 ];
 
 // Auswahlliste inkl. eines abweichenden vorhandenen Werts

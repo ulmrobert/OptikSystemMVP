@@ -235,6 +235,7 @@ describe("Auftragszettel: Ableitungen", () => {
     expect(
       glastypAusBrillenart("Erweiterte Führerscheinuntersuchung"),
     ).toBeNull();
+    expect(glastypAusBrillenart("Intraokular - Druckmessung")).toBeNull();
     expect(glastypAusBrillenart("elektronische Sehhilfe")).toBeNull();
     expect(glastypAusBrillenart("")).toBeNull();
   });
