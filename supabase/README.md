@@ -231,6 +231,7 @@ siehe unten.
 | alle drei, optional (siehe unten) | `DEV_ALLOWED_RECIPIENTS` | nein |
 | `begruendung-vorschlagen` (Claude API, siehe unten) | `ANTHROPIC_API_KEY` | ja |
 | `google-kalender` (Termin-Abgleich, siehe unten) | `GOOGLE_KALENDER_ICS_URL` | ja |
+| `fundus-import` (Funduskamera DRSplus, siehe `tools/fundus-import/README.md`; Deploy mit `--no-verify-jwt`) | `FUNDUS_IMPORT_TOKEN` | ja (mind. 32 Zeichen) |
 
 Namen und Pflicht-Status sind direkt aus den `Deno.env.get(...)`-Aufrufen
 im jeweiligen `supabase/functions/*/index.ts` abgelesen - bei Änderungen an
