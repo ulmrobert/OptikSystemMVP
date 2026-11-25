@@ -90,6 +90,9 @@ import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
 
 type Datensatz = Record<string, unknown> & { id: number };
 
+/** Vorbelegung für den Glas-Hersteller bei neuen Aufträgen. */
+const GLAS_HERSTELLER_VORGABE = "POC";
+
 const zahl = (wert: unknown) => {
   if (wert === null || wert === undefined || wert === "") return null;
   const n = Number(wert);
@@ -1018,7 +1021,17 @@ export const BrilleKarteikarte = () => {
 
   if (!brille) return null;
 
-  const glasFeld = komponente("glastyp", "Glastyp", glastyp);
+  // Neue Glasangaben bekommen den Hersteller "POC" vorbelegt (im Feld
+  // jederzeit änderbar). Nur beim ersten Anlegen: hat der Auftrag schon
+  // Glasangaben, bleibt deren Hersteller auch beim Kopieren erhalten.
+  const glasFeld = komponente(
+    "glastyp",
+    "Glastyp",
+    glastyp,
+    brille.Glastyp == null
+      ? { Hersteller: GLAS_HERSTELLER_VORGABE }
+      : undefined,
+  );
   const fassungFeld = komponente("fassung", "Fassung", fassung);
   const textFeld = (
     feld: string,
