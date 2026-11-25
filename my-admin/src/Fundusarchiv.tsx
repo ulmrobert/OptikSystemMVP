@@ -18,6 +18,7 @@ import {
   type Augenbefund,
 } from "./fundusbericht";
 import { DOKUMENT_BUCKET } from "./kundeDokumenteSpeicher";
+import { FundusEingangListe } from "./FundusEingangListe";
 import { supabase } from "./utils";
 
 /*
@@ -180,6 +181,9 @@ export const FundusberichtListe = ({
 export const Fundusarchiv = () => (
   <Box sx={{ p: { xs: 1, md: 2 } }}>
     <Title title="Fundusarchiv" />
+    <Card sx={{ p: 2, mb: 2 }}>
+      <FundusEingangListe />
+    </Card>
     <Card sx={{ p: 2 }}>
       <FundusberichtListe />
     </Card>

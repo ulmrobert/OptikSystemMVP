@@ -66,6 +66,7 @@ import {
   rabattOptionen,
 } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
+import { SONSTIGES_PRAEFIX, sonstigesText } from "./zusatzleistungSonstiges";
 import { KassenanteilRechner } from "./KassenanteilRechner";
 import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
 import { GlasFinderDialog } from "./GlasFinderDialog";
@@ -591,6 +592,13 @@ export const WerteTabelle = ({
 // Betrag wird rechts daneben eingetragen. Die Summe rechnet ein
 // Datenbank-Trigger neu.
 export const INDIVIDUELL = "Individuell";
+// Letzter Eintrag der Liste: setzt "Sonstiges: " ins Feld, damit man die
+// Leistung frei beschreibt (Enter legt sie als individuelle Leistung an).
+const SONSTIGES_OPTION: Datensatz = {
+  id: -1, // gibt es in der Datenbank nicht
+  Bezeichnung: "Sonstiges (frei beschreiben) …",
+  Betrag: null,
+};
 const ZusatzleistungAuswahl = ({
   z,
   s,
@@ -610,7 +618,11 @@ const ZusatzleistungAuswahl = ({
   const angebot = (katalog ?? []).filter((l) => !vorhanden.includes(l.id));
 
   const hinzufuegen = async (wahl: Datensatz | string) => {
-    const freierText = typeof wahl === "string" ? wahl.trim() : "";
+    if (typeof wahl !== "string" && wahl.id === SONSTIGES_OPTION.id) {
+      setEingabe(SONSTIGES_PRAEFIX);
+      return;
+    }
+    const freierText = typeof wahl === "string" ? sonstigesText(wahl) : "";
     if (typeof wahl === "string" && !freierText) return;
     setSpeichert(true);
     try {
@@ -665,7 +677,17 @@ const ZusatzleistungAuswahl = ({
         fullWidth
         openOnFocus
         disabled={speichert}
-        options={angebot}
+        options={[...angebot, SONSTIGES_OPTION]}
+        filterOptions={(optionen, { inputValue }) => {
+          const t = inputValue.trim().toLowerCase();
+          if (!t) return optionen;
+          // "Sonstiges" bleibt immer als letzter Eintrag sichtbar
+          return optionen.filter(
+            (l) =>
+              l.id === SONSTIGES_OPTION.id ||
+              text(l.Bezeichnung).toLowerCase().includes(t),
+          );
+        }}
         value={undefined}
         inputValue={eingabe}
         onInputChange={(_, v, grund) => {
@@ -683,7 +705,9 @@ const ZusatzleistungAuswahl = ({
               {text(l.Bezeichnung)}
             </Box>
             <Box component="span" sx={{ color: "text.secondary" }}>
-              {betragText(l.Betrag)} €
+              {l.id === SONSTIGES_OPTION.id
+                ? "Preis frei"
+                : `${betragText(l.Betrag)} €`}
             </Box>
           </li>
         )}
