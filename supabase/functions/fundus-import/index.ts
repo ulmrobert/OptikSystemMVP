@@ -84,11 +84,17 @@ const istPng = (b: Uint8Array) =>
 Deno.serve(async (req: Request) => {
     if (req.method !== 'POST') return antwort({ error: 'Methode nicht erlaubt.' }, 405);
 
-    const erwartet = Deno.env.get('FUNDUS_IMPORT_TOKEN') ?? '';
-    if (erwartet.length < 32) {
+    const erwartet = (Deno.env.get('FUNDUS_IMPORT_TOKEN') ?? '').trim();
+    if (!erwartet) {
         return antwort({ error: 'Fundus-Import ist noch nicht eingerichtet (FUNDUS_IMPORT_TOKEN fehlt).' }, 503);
     }
-    if (!gleich(req.headers.get('x-fundus-token') ?? '', erwartet)) {
+    if (erwartet.length < 32) {
+        return antwort(
+            { error: `FUNDUS_IMPORT_TOKEN ist zu kurz (${erwartet.length} Zeichen, mindestens 32).` },
+            503,
+        );
+    }
+    if (!gleich((req.headers.get('x-fundus-token') ?? '').trim(), erwartet)) {
         return antwort({ error: 'Nicht berechtigt.' }, 401);
     }
 

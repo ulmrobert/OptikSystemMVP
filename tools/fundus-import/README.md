@@ -29,9 +29,13 @@ passen („Hölzl“ = „HOELZL“). Widerspricht das Geburtsdatum der ID, wird
 
 1. Migration `20261124120000_fundus_eingang.sql` einspielen (läuft über den
    normalen Ablauf dev → main).
-2. Zufälligen Schlüssel erzeugen (mind. 32 Zeichen), z. B. in PowerShell:
-   `[Convert]::ToBase64String((1..32 | % { Get-Random -Max 256 }))`
-3. Secret setzen: Supabase → Prod → Edge Functions → Secrets →
+2. Zufälligen Schlüssel erzeugen (mind. 32 Zeichen, kryptografisch sicher)
+   und in die Zwischenablage legen, in PowerShell:
+   `$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); Set-Clipboard ([Convert]::ToBase64String($b))`
+   Den Schlüssel im Passwort-Manager aufbewahren; er wird in Schritt 2 auf
+   dem Praxis-PC noch einmal gebraucht.
+3. Secret setzen: Supabase → Projekt **Optik-System Prod**
+   (`cktdtojgrxskihihmnjm`) → Edge Functions → Secrets →
    `FUNDUS_IMPORT_TOKEN` = der Schlüssel.
 4. Function bereitstellen (ohne JWT-Prüfung, sie prüft den Schlüssel selbst):
    `supabase functions deploy fundus-import --project-ref cktdtojgrxskihihmnjm --no-verify-jwt`

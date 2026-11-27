@@ -72,6 +72,11 @@ import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
 import { GlasFinderDialog } from "./GlasFinderDialog";
 import type { Lagerglas } from "./glasFinder";
 import { supabase } from "./utils";
+import {
+  HAEUFIGSTE_ANZAHL,
+  glastypVorschlaege,
+  type GlastypHaeufigkeit,
+} from "./glastypAuswahl";
 import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
 import { AuftragsstatusLeiste } from "./AuftragsstatusLeiste";
 import { ENTSPIEGELUNGEN } from "./entspiegelungen";
@@ -89,6 +94,29 @@ import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
  */
 
 type Datensatz = Record<string, unknown> & { id: number };
+
+/** Vorbelegung für den Glas-Hersteller bei neuen Aufträgen. */
+const GLAS_HERSTELLER_VORGABE = "POC";
+
+// meistverkaufte Glastypen (View glastyp_haeufigkeit); einmal je Sitzung
+let glastypHaeufigCache: Promise<GlastypHaeufigkeit[]> | null = null;
+const ladeGlastypHaeufigkeit = (): Promise<GlastypHaeufigkeit[]> => {
+  glastypHaeufigCache ??= Promise.resolve(
+    supabase
+      .from("glastyp_haeufigkeit")
+      .select("Bezeichnung,Anzahl")
+      .gt("Anzahl", 0)
+      .order("Anzahl", { ascending: false })
+      .limit(HAEUFIGSTE_ANZAHL),
+  ).then(({ data, error }) => {
+    if (error) {
+      glastypHaeufigCache = null; // beim nächsten Öffnen erneut versuchen
+      return [];
+    }
+    return (data ?? []) as GlastypHaeufigkeit[];
+  });
+  return glastypHaeufigCache;
+};
 
 const zahl = (wert: unknown) => {
   if (wert === null || wert === undefined || wert === "") return null;
@@ -977,16 +1005,26 @@ export const BrilleKarteikarte = () => {
     },
     { staleTime: 5 * 60 * 1000 },
   );
+  // die meistverkauften Gläser (letzte 24 Monate) stehen oben in der Liste
+  const [glastypHaeufig, setGlastypHaeufig] = useState<GlastypHaeufigkeit[]>(
+    [],
+  );
+  useEffect(() => {
+    let aktiv = true;
+    void ladeGlastypHaeufigkeit().then((h) => {
+      if (aktiv) setGlastypHaeufig(h);
+    });
+    return () => {
+      aktiv = false;
+    };
+  }, []);
   const glastypNamen = useMemo(
     () =>
-      [
-        ...new Set(
-          (letzteGlastypen ?? [])
-            .map((g) => text(g.Bezeichnung))
-            .filter(Boolean),
-        ),
-      ].sort((a, b) => a.localeCompare(b, "de")),
-    [letzteGlastypen],
+      glastypVorschlaege(
+        glastypHaeufig,
+        (letzteGlastypen ?? []).map((g) => text(g.Bezeichnung)),
+      ),
+    [glastypHaeufig, letzteGlastypen],
   );
   const glastypFeld = useRef<HTMLDivElement>(null);
   const { data: zuordnungen } = useGetList<Datensatz>(
@@ -1018,7 +1056,17 @@ export const BrilleKarteikarte = () => {
 
   if (!brille) return null;
 
-  const glasFeld = komponente("glastyp", "Glastyp", glastyp);
+  // Neue Glasangaben bekommen den Hersteller "POC" vorbelegt (im Feld
+  // jederzeit änderbar). Nur beim ersten Anlegen: hat der Auftrag schon
+  // Glasangaben, bleibt deren Hersteller auch beim Kopieren erhalten.
+  const glasFeld = komponente(
+    "glastyp",
+    "Glastyp",
+    glastyp,
+    brille.Glastyp == null
+      ? { Hersteller: GLAS_HERSTELLER_VORGABE }
+      : undefined,
+  );
   const fassungFeld = komponente("fassung", "Fassung", fassung);
   const textFeld = (
     feld: string,
