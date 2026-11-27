@@ -89,7 +89,10 @@ Deno.serve(async (req: Request) => {
         return antwort({ error: 'Fundus-Import ist noch nicht eingerichtet (FUNDUS_IMPORT_TOKEN fehlt).' }, 503);
     }
     if (erwartet.length < 32) {
-        return antwort({ error: 'FUNDUS_IMPORT_TOKEN ist zu kurz (mindestens 32 Zeichen).' }, 503);
+        return antwort(
+            { error: `FUNDUS_IMPORT_TOKEN ist zu kurz (${erwartet.length} Zeichen, mindestens 32).` },
+            503,
+        );
     }
     if (!gleich((req.headers.get('x-fundus-token') ?? '').trim(), erwartet)) {
         return antwort({ error: 'Nicht berechtigt.' }, 401);
